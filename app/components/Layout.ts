@@ -1,3 +1,5 @@
+import { move } from "react-native-redash";
+
 import { type SharedValues } from "types/AnimatedHelpers";
 
 export type Offset = SharedValues<{
@@ -20,9 +22,18 @@ function byOrder(a: Offset, b: Offset) {
   return a.order.value > b.order.value ? 1 : -1;
 }
 
-export function calculateLayout(input: Offset[], containerWidth: number) {
+export function reorderWords(allWords: Offset[], fromPosition: number, toPosition: number) {
   "worklet";
-  const positionedWords = input.filter(notInWordBank).sort(byOrder);
+  const positionedWords = allWords.filter(notInWordBank).sort(byOrder);
+  const repositioned = move(positionedWords, fromPosition, toPosition);
+  repositioned.forEach((word, index) => {
+    word.order.value = index;
+  });
+}
+
+export function calculateLayout(allWords: Offset[], containerWidth: number) {
+  "worklet";
+  const positionedWords = allWords.filter(notInWordBank).sort(byOrder);
   if (positionedWords.length === 0) return;
 
   const lineHeight = positionedWords[0].height.value; // all elements have the same height
