@@ -9,3 +9,37 @@ export type Offset = SharedValues<{
   originalX: number;
   originalY: number;
 }>;
+
+function notInWordBank(offset: Offset) {
+  "worklet";
+  return offset.order.value !== -1;
+}
+
+function byOrder(a: Offset, b: Offset) {
+  "worklet";
+  return a.order.value > b.order.value ? 1 : -1;
+}
+
+export function calculateLayout(input: Offset[], containerWidth: number) {
+  "worklet";
+  const positionedWords = input.filter(notInWordBank).sort(byOrder);
+  if (positionedWords.length === 0) return;
+
+  const lineHeight = positionedWords[0].height.value; // all elements have the same height
+  let lineNumber = 0;
+  let lineBreak = 0;
+
+  positionedWords.forEach(( word, index ) => {
+    const totalLineWidthWithoutThisWord = positionedWords
+      .slice(lineBreak, index)
+      .reduce((acc, element) => acc + element.width.value, 0);
+    if (totalLineWidthWithoutThisWord + word.width.value > containerWidth ) {
+      lineNumber += 1;
+      lineBreak = index;
+      word.x.value = 0;
+    } else {
+      word.x.value = totalLineWidthWithoutThisWord;
+    }
+    word.y.value = lineHeight * lineNumber;
+  })
+}
