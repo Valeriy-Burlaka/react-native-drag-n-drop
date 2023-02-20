@@ -7,7 +7,7 @@ import Animated, {
   useSharedValue,
   useDerivedValue,
 } from "react-native-reanimated";
-import { PanGestureHandler } from "react-native-gesture-handler";
+import { GestureEvent, PanGestureHandler } from "react-native-gesture-handler";
 import { between, useVector } from "react-native-redash";
 
 import { calculateLayout, lastOrder, Offset, reorder } from "./Layout";
@@ -30,12 +30,50 @@ export const SortableWord = ({
   containerWidth,
 }: SortableWordProps) => {
   const offset = offsets[index];
+  const isGestureActive = useSharedValue(false);
+  const translation = useVector();
   const isInBank = useDerivedValue(() => offset?.order.value === -1);
+
+  const onGestureEvent = useAnimatedGestureHandler<GestureEvent<{ x: number, y: number }>>({
+    onStart: (event, ctx) => {
+      if (isInBank.value) {
+        translation.x.value = offset.originalX.value - PLACEHOLDER_LEFT_MARGIN;
+        translation.y.value = offset.originalY.value + PLACEHOLDER_TOP_MARGIN;
+      } else {
+        translation.x.value = offset.x.value;
+        translation.y.value = offset.y.value;
+      }
+
+      ctx.x = translation.x.value;
+      ctx.y = translation.y.value;
+      isGestureActive.value = true;
+    },
+    onEnd: () => {
+      isGestureActive.value = false;
+    },
+    onActive: ({ translationX, translationY }, ctx) => {
+      translation.x.value = ctx.x + translationX;
+      translation.y.value = ctx.y + translationY;
+    },
+  });
+
   const translateX = useDerivedValue(() => {
-    return isInBank.value ? offset?.originalX.value - PLACEHOLDER_LEFT_MARGIN : offset?.x.value;
+    if (isGestureActive.value) {
+      return translation.x.value;
+    }
+    if (isInBank.value) {
+      return offset.originalX.value - PLACEHOLDER_LEFT_MARGIN;
+    }
+    return offset.x.value;
   });
   const translateY = useDerivedValue(() => {
-    return isInBank.value ? offset?.originalY.value + PLACEHOLDER_TOP_MARGIN : offset?.y.value;
+    if (isGestureActive.value) {
+      return translation.y.value;
+    }
+    if (isInBank.value) {
+      return offset.originalY.value + PLACEHOLDER_TOP_MARGIN;
+    }
+    return offset.y.value;
   });
 
   const style = useAnimatedStyle(() => {
@@ -48,16 +86,19 @@ export const SortableWord = ({
       transform: [
         { translateX: translateX.value },
         { translateY: translateY.value },
-      ]
+      ],
+      zIndex: isGestureActive.value ? 100 : 0,
     };
   });
   return (
     <>
       <Placeholder offset={offset} />
       <Animated.View style={style}>
-        <Animated.View style={StyleSheet.absoluteFill}>
-          {children}
-        </Animated.View>
+        <PanGestureHandler onGestureEvent={onGestureEvent}>
+          <Animated.View style={StyleSheet.absoluteFill}>
+            {children}
+          </Animated.View>
+        </PanGestureHandler>
       </Animated.View>
     </>
   );
