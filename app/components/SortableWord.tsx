@@ -67,19 +67,25 @@ export const SortableWord = ({
     if (isGestureActive.value) {
       return translation.x.value;
     }
-    if (isInBank.value) {
-      return originalX.value;
-    }
-    return offset.x.value;
+    return withSpring(
+      isInBank.value ? originalX.value : offset.x.value,
+      {
+        damping: 30,
+        stiffness: 200,
+      }
+    );
   });
   const translateY = useDerivedValue(() => {
     if (isGestureActive.value) {
       return translation.y.value;
     }
-    if (isInBank.value) {
-      return originalY.value;
-    }
-    return offset.y.value;
+    return withSpring(
+      isInBank.value ? originalY.value : offset.y.value,
+      {
+        damping: 30,
+        stiffness: 200,
+      }
+    );
   });
 
   const style = useAnimatedStyle(() => {
