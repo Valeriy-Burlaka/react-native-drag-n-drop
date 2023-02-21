@@ -7,7 +7,11 @@ import Animated, {
   useSharedValue,
   useDerivedValue,
 } from "react-native-reanimated";
-import { GestureEvent, PanGestureHandler } from "react-native-gesture-handler";
+import {
+  GestureEvent,
+  PanGestureHandler,
+  type PanGestureHandlerEventPayload,
+} from "react-native-gesture-handler";
 import { between, useVector } from "react-native-redash";
 
 import { calculateLayout, lastOrder, Offset, reorder } from "./Layout";
@@ -17,28 +21,30 @@ import Placeholder, {
 } from "./Placeholder";
 
 interface SortableWordProps {
-  offsets: Offset[];
+  offset: Offset;
   children: ReactElement<{ id: number }>;
-  index: number;
   containerWidth: number;
 }
 
 export const SortableWord = ({
-  offsets,
-  index,
+  offset,
   children,
   containerWidth,
 }: SortableWordProps) => {
-  const offset = offsets[index];
   const isGestureActive = useSharedValue(false);
   const translation = useVector();
-  const isInBank = useDerivedValue(() => offset?.order.value === -1);
+  const isInBank = useDerivedValue(() => offset.order.value === -1);
+  const originalX = useDerivedValue(() => offset.originalX.value - PLACEHOLDER_LEFT_MARGIN);
+  const originalY = useDerivedValue(() => offset.originalY.value + PLACEHOLDER_TOP_MARGIN);
 
-  const onGestureEvent = useAnimatedGestureHandler<GestureEvent<{ x: number, y: number }>>({
-    onStart: (event, ctx) => {
+  const onGestureEvent = useAnimatedGestureHandler<
+    GestureEvent<PanGestureHandlerEventPayload>,
+    { x: number, y: number }
+  >({
+    onStart: (_event, ctx) => {
       if (isInBank.value) {
-        translation.x.value = offset.originalX.value - PLACEHOLDER_LEFT_MARGIN;
-        translation.y.value = offset.originalY.value + PLACEHOLDER_TOP_MARGIN;
+        translation.x.value = originalX.value;
+        translation.y.value = originalY.value;
       } else {
         translation.x.value = offset.x.value;
         translation.y.value = offset.y.value;
@@ -62,7 +68,7 @@ export const SortableWord = ({
       return translation.x.value;
     }
     if (isInBank.value) {
-      return offset.originalX.value - PLACEHOLDER_LEFT_MARGIN;
+      return originalX.value;
     }
     return offset.x.value;
   });
@@ -71,7 +77,7 @@ export const SortableWord = ({
       return translation.y.value;
     }
     if (isInBank.value) {
-      return offset.originalY.value + PLACEHOLDER_TOP_MARGIN;
+      return originalY.value;
     }
     return offset.y.value;
   });
@@ -90,6 +96,7 @@ export const SortableWord = ({
       zIndex: isGestureActive.value ? 100 : 0,
     };
   });
+
   return (
     <>
       <Placeholder offset={offset} />
