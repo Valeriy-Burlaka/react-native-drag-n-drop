@@ -83,7 +83,8 @@ export const WordList = ({ children }: WordListProps) => {
       {children.map((child, index) => (
         <SortableWord
           key={index}
-          offset={offsets[index]}
+          offsets={offsets}
+          index={index}
           containerWidth={containerWidth}
         >
           {child}

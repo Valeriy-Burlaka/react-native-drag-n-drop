@@ -14,28 +14,37 @@ import {
 } from "react-native-gesture-handler";
 import { between, useVector } from "react-native-redash";
 
-import { calculateLayout, lastOrder, Offset, reorder } from "./Layout";
+import {
+  calculateLayout,
+  lastPositionInSentence,
+  recalculateWordOrder,
+  type Offset,
+} from "./Layout";
 import Placeholder, {
   MARGIN_TOP as PLACEHOLDER_TOP_MARGIN,
   MARGIN_LEFT as PLACEHOLDER_LEFT_MARGIN,
 } from "./Placeholder";
 
 interface SortableWordProps {
-  offset: Offset;
+  offsets: Offset[];
+  index: number;
   children: ReactElement<{ id: number }>;
   containerWidth: number;
 }
 
 export const SortableWord = ({
-  offset,
+  offsets,
+  index,
   children,
   containerWidth,
 }: SortableWordProps) => {
+  const offset = offsets[index] as Offset;
   const isGestureActive = useSharedValue(false);
   const translation = useVector();
   const isInBank = useDerivedValue(() => offset.order.value === -1);
   const originalX = useDerivedValue(() => offset.originalX.value - PLACEHOLDER_LEFT_MARGIN);
   const originalY = useDerivedValue(() => offset.originalY.value + PLACEHOLDER_TOP_MARGIN);
+  // console.log(originalY.value, offset.height.value)
 
   const onGestureEvent = useAnimatedGestureHandler<
     GestureEvent<PanGestureHandlerEventPayload>,
@@ -56,10 +65,27 @@ export const SortableWord = ({
     },
     onEnd: () => {
       isGestureActive.value = false;
+      translation.x.value = withSpring(offset.x.value);
+      translation.y.value = withSpring(offset.y.value);
     },
     onActive: ({ translationX, translationY }, ctx) => {
       translation.x.value = ctx.x + translationX;
       translation.y.value = ctx.y + translationY;
+      // console.log(translationY, translation.y.value);
+
+      // We drag the words up in the `WordList` container, hence the drag event's `translationY` value decreases.
+      // When `translation.y.value`, which is a derivation of `originalY + translationY`, is < 100, it means
+      // that we dragged the word ~halfway through the parent container's (WordList) height.
+      // This means that the dragged element is somewhere around a sentence's zone, so we drop it into the sentence.
+      if (isInBank.value && translation.y.value < 100) {
+        offset.order.value = lastPositionInSentence(offsets);
+        calculateLayout(offsets, containerWidth);
+      } else if (!isInBank.value && translation.y.value > 100) {
+        offset.order.value = -1;
+        calculateLayout(offsets, containerWidth);
+        // Need to asign new order values to all words in the sentence because we've just removed a word
+        recalculateWordOrder(offsets); // Don't confuse with the WorLd order.
+      }
     },
   });
 

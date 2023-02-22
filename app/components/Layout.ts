@@ -25,10 +25,18 @@ function byOrder(a: Offset, b: Offset) {
 export function reorderWords(allWords: Offset[], fromPosition: number, toPosition: number) {
   "worklet";
   const positionedWords = allWords.filter(notInWordBank).sort(byOrder);
+  if (positionedWords.length === 0) return;
+
   const repositioned = move(positionedWords, fromPosition, toPosition);
   repositioned.forEach((word, index) => {
     word.order.value = index;
   });
+}
+
+export function recalculateWordOrder(allWords: Offset[]) {
+  "worklet";
+  const positionedWords = allWords.filter(notInWordBank).sort(byOrder);
+  positionedWords.forEach((word, index) => (word.order.value = index));
 }
 
 export function calculateLayout(allWords: Offset[], containerWidth: number) {
@@ -53,4 +61,9 @@ export function calculateLayout(allWords: Offset[], containerWidth: number) {
     }
     word.y.value = lineHeight * lineNumber;
   })
+}
+
+export function lastPositionInSentence(allWords: Offset[]) {
+  "worklet";
+  return allWords.filter(notInWordBank).length;
 }
