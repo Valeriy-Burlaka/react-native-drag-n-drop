@@ -40,6 +40,9 @@ export const SortableWord = ({
 }: SortableWordProps) => {
   const offset = offsets[index] as Offset;
   const isGestureActive = useSharedValue(false);
+  const isAnimatedTransitionActiveX = useSharedValue(false);
+  const isAnimatedTransitionActiveY = useSharedValue(false);
+
   const translation = useVector();
   const isInBank = useDerivedValue(() => offset.order.value === -1);
   const originalX = useDerivedValue(() => offset.originalX.value - PLACEHOLDER_LEFT_MARGIN);
@@ -90,26 +93,32 @@ export const SortableWord = ({
   const translateX = useDerivedValue(() => {
     if (isGestureActive.value) {
       return translation.x.value;
+    } else {
+      isAnimatedTransitionActiveX.value = true;
+      return withSpring(
+        isInBank.value ? originalX.value : offset.x.value,
+        {
+          damping: 30,
+          stiffness: 200,
+        },
+        () => (isAnimatedTransitionActiveX.value = false),
+      );
     }
-    return withSpring(
-      isInBank.value ? originalX.value : offset.x.value,
-      {
-        damping: 30,
-        stiffness: 200,
-      }
-    );
   });
   const translateY = useDerivedValue(() => {
     if (isGestureActive.value) {
       return translation.y.value;
+    } else {
+      isAnimatedTransitionActiveY.value = true;
+      return withSpring(
+        isInBank.value ? originalY.value : offset.y.value,
+        {
+          damping: 30,
+          stiffness: 200,
+        },
+        () => (isAnimatedTransitionActiveY.value = false),
+      );
     }
-    return withSpring(
-      isInBank.value ? originalY.value : offset.y.value,
-      {
-        damping: 30,
-        stiffness: 200,
-      }
-    );
   });
 
   const style = useAnimatedStyle(() => {
@@ -123,7 +132,7 @@ export const SortableWord = ({
         { translateX: translateX.value },
         { translateY: translateY.value },
       ],
-      zIndex: isGestureActive.value ? 100 : 0,
+      zIndex: isGestureActive.value || isAnimatedTransitionActiveX.value || isAnimatedTransitionActiveY.value ? 100 : 0,
     };
   });
 
