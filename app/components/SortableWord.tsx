@@ -65,13 +65,10 @@ export const SortableWord = ({
     },
     onEnd: () => {
       isGestureActive.value = false;
-      translation.x.value = withSpring(offset.x.value);
-      translation.y.value = withSpring(offset.y.value);
     },
     onActive: ({ translationX, translationY }, ctx) => {
       translation.x.value = ctx.x + translationX;
       translation.y.value = ctx.y + translationY;
-      // console.log(translationY, translation.y.value);
 
       // We drag the words up in the `WordList` container, hence the drag event's `translationY` value decreases.
       // When `translation.y.value`, which is a derivation of `originalY + translationY`, is < 100, it means
@@ -80,6 +77,7 @@ export const SortableWord = ({
       if (isInBank.value && translation.y.value < 100) {
         offset.order.value = lastPositionInSentence(offsets);
         calculateLayout(offsets, containerWidth);
+      // Move the word back to the bank if we dragged it far enough from the sentence.
       } else if (!isInBank.value && translation.y.value > 100) {
         offset.order.value = -1;
         calculateLayout(offsets, containerWidth);
